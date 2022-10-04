@@ -6,98 +6,103 @@
  * L'eventuale aggiunta di test è valutata positivamente.
  */
 
-import type { NextPage } from 'next'
-import {useEffect, useReducer, useState} from 'react'
-import { useRouter } from 'next/router'
+import type {NextPage} from 'next'
+import React, {useEffect, useReducer, useState} from 'react'
+import {useRouter} from 'next/router'
 /* externalized types to clean the page and make it accessible from anywhere without rewriting */
-import { Todo } from '../types/types'
-import {useGetTodos} from "../hooks/queries";
+import {Todo} from '../types/types'
+import {useFetch} from "../hooks/useFetch";
+import ListCard from "../components/ListCard";
 
+const url = 'https://jsonplaceholder.typicode.com/todos';
 
 const Home: NextPage = () => {
-  const router = useRouter()
-  /* refactoring fetch to make it reusable, externalized fetcher and state management in queries file */
-  const todos = useGetTodos();
-  const [search, setSearch] = useState('');
-  const [results, setResults] = useState<Todo[]>([])
+    const router = useRouter()
+    /* made custom hook to fetch data */
+    const {data, loading, error} = useFetch(url);
+    const [search, setSearch] = useState('');
+    const [results, setResults] = useState<Todo[]>([])
 
-  useEffect(() => {
-    setResults(todos);
-  }, [todos])
+    useEffect(() => {
+        setResults(data);
+    }, [data])
 
-  /* refactoring search function to include results and manage the different cases */
-  const searchItems = (searchValue: string) => {
-    setSearch(searchValue)
-    if (search !== '') {
-      const filteredData = todos.filter((item) => {
-        return Object.values(item).join('').toLowerCase().includes(search.toLowerCase())
-      })
-      setResults(filteredData)
+    /* refactoring search function to include results and manage the different cases */
+    const searchItems = (searchValue: string) => {
+        setSearch(searchValue)
+        if (search !== '') {
+            const filteredData = data.filter((item) => {
+                return Object.values(item).join('').toLowerCase().includes(search.toLowerCase())
+            })
+            setResults(filteredData)
+        } else {
+            setResults(data)
+        }
     }
-    else{
-      setResults(todos)
+
+    const handleOnClickTodo = (id: number) => {
+        router.push('/todo/' + id)
     }
-  }
 
-  const handleOnClickTodo = (id: number) => {
-    router.push('/todo/' + id)
-  }
+    const handleOnClickDelete = (id: number) => {
+        console.log(id)
+        console.log('delete');
+        setResults(results.filter(item => item.id !== id))
+        console.log(results)
+        /* I don't actually need setTodos here, in a real environment I would update directly the todos via post */
+    }
 
-  const handleOnClickDelete = (id: number) => {
-    setResults(results.filter(item => item.id !== id))
-    /* I don't actually need setTodos here, in a real environment I would update directly the todos via post */
-  }
+    return (
+        <div style={styles.container}>
+            <main style={styles.main as React.CSSProperties}>
+                <input
+                    style={styles.search}
+                    value={search}
+                    onChange={(e) => searchItems(e.target.value)}
+                    placeholder='Search todo...'
+                />
+                {results.map(({id, title, completed}) => (
 
-  return (
-      <div style={styles.container}>
-        <main style={styles.main}>
-          <input
-              style={styles.search}
-              value={search}
-              onChange={(e) => searchItems(e.target.value)}
-              placeholder='Search todo...'
-          />
-          {results.map(({ id, title, completed }) => (
-              <div
-                  key={id}
-                  style={styles.item}
-              >
-                <p>{title}</p>
-                {completed ? <p>✅</p> : null}
-                <button onClick={() => handleOnClickDelete(id)}>Delete</button>
-                <button onClick={() => handleOnClickTodo(id)}>Details</button>
-              </div>
-          ))}
-        </main>
-      </div>
-  )
+                    <ListCard
+                        id={id}
+                        key={id}
+                        title={title}
+                        completed={completed}
+                        onDelete={handleOnClickDelete}
+                        onConfirm={handleOnClickTodo}
+                    />
+                ))}
+            </main>
+        </div>
+    )
 }
 
 const styles = {
-  container: {
-    padding: '0.5rem'
-  },
-  main: {
-    flex: 1,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  item: {
-    width: '100%',
-    padding: '0.5rem',
-    border: '1px solid whitesmoke',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  search: {
-    padding: '0.5rem',
-    marginBottom: '0.5rem',
-    width: '100%',
-    color: 'black',
-    border: '1px solid black'
-  }
+    container: {
+        padding: '0.5rem'
+    },
+    main: {
+        flex: 1,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexWrap: 'wrap'
+    },
+    item: {
+        width: '100%',
+        padding: '0.5rem',
+        border: '1px solid whitesmoke',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+    },
+    search: {
+        padding: '0.5rem',
+        marginBottom: '0.5rem',
+        width: '100%',
+        color: 'black',
+        border: '1px solid black',
+    }
 }
 
 export default Home
